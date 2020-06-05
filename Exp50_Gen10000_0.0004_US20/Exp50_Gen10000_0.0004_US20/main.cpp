@@ -1,4 +1,4 @@
-/*美股測試*/
+/*美股市值前20大測試*/
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -89,9 +89,9 @@ int i, j, k, a;
 int kind[50];
 //double n;
 int n[50];//算選的投資組合有幾個
-int partical_num = 1;
-int generation = 1;
-int experiment_time = 1;
+int partical_num = 10;
+int generation = 10000;
+int experiment_time = 50;
 int s_stock_index = 0;//train stock num
 int test_stock_index = 0;
 
@@ -303,8 +303,8 @@ string H2H_test[] = { "test_2013_Q1-Q2(2012 Q1).csv", "test_2013_Q3-Q4(2013 Q1).
 
 
 void read_file(int a) {
-	input_file.open(MM_train[a], ios::in);
-	cout << endl << MM_train[a] << endl;
+	input_file.open(Y2M_train[a], ios::in);
+	cout << endl << Y2M_train[a] << endl;
 	string line;
 	while (getline(input_file, line))
 	{
@@ -343,8 +343,8 @@ void read_file(int a) {
 
 void test_read_file(int a) {
 
-	test_input_file.open(M2M_test[a], ios::in);
-	cout << endl << M2M_test[a] << endl;
+	test_input_file.open(Y2M_test[a], ios::in);
+	cout << endl << Y2M_test[a] << endl;
 	string test_line;
 	while (getline(test_input_file, test_line))
 	{
@@ -541,6 +541,10 @@ void test_standardization(int a)//測試期資金水位計算
 		{
 			real_last_total_std[a][k] = test_yi[k];
 		}
+		if (Gbest_max <= 0)
+		{
+			real_last_total_std[a][k] = test_initial_fund;
+		}
 		else if (test_yi[k] <= 10)
 		{
 			real_last_total_std[a][k] = test_initial_fund;
@@ -639,6 +643,7 @@ void fitness()
 		m1 = 0;
 		m2 = 0;
 		m[i] = 0;
+		
 
 		for (int k = 0; k < day; k++)
 		{
@@ -651,6 +656,8 @@ void fitness()
 	for (int i = 0; i < partical_num; i++) {
 		risk[i] = 0;
 		r1 = 0;
+		all_trend_ratio[i] = 0.0;
+		trend_ratio = 0;
 		for (int k = 0; k < day; k++)
 		{
 			Yi[i][k] = 0;
@@ -777,6 +784,7 @@ void Gbest_num_find()//找Gbest於實驗次數中出現的次數
 
 void generation_compare()
 {
+	best_generation = 0;
 	for (int j = 0; j < experiment_time; j++)
 	{
 		for (int t = 0; t < generation; t++)
@@ -840,9 +848,9 @@ void Gbest_stock_selection()
 
 void out_file(int a)
 {
-	/*if (Gbest_max > 0)
-	{*/
-	string ouput_file = "Larry_result_" + MM_train[a].substr(0, MM_train[a].length());//輸出檔案名稱
+	if (Gbest_max > 0)
+	{
+	string ouput_file = "Larry_result_" + Y2M_train[a].substr(0, Y2M_train[a].length());//輸出檔案名稱
 	output_file.open(ouput_file, ios::app);//檔案輸出
 	output_file << "代數" << "," << generation << endl;
 	output_file << "粒子數" << "," << partical_num << endl;
@@ -907,7 +915,7 @@ void out_file(int a)
 
 	}
 	output_file.close();
-	//}
+}
 }
 
 
@@ -1099,14 +1107,12 @@ int main()
 	{
 		index = 0;
 		day = 0;
-		if (a == 1)
-		{
-			read_file(a);
+		read_file(a);
 			for (int j = 0; j < experiment_time; j++)
 			{
 				//index = 0;
 				//day = 0;
-				all_max = -999999999999999.0;
+				all_max = 0;
 				initial();
 				for (int t = 0; t < generation; t++)
 				{
@@ -1149,7 +1155,7 @@ int main()
 			Gbest_stock_selection();
 			out_file(a);
 			test_index = 0;
-			//test_read_file(a);//測試期讀檔
+			test_read_file(a);//測試期讀檔
 			if (a == 0)
 			{
 				test_initial_fund = initial_fund;//如果是第一個測試期檔案,則初始資金為10000000
@@ -1163,10 +1169,10 @@ int main()
 				test_initial_fund = test_all_final_fund;//第二個測試期檔案開始,初始資金為上一區間最後資金
 
 			}
-			//test_standardization(a);
-			//test_fitness();
-			//all_test_return();//總體測試期預期報酬計算
-			//test_out_file(a);//測試期檔案輸出
+			test_standardization(a);
+			test_fitness();
+			all_test_return();//總體測試期預期報酬計算
+			test_out_file(a);//測試期檔案輸出
 			all_file_gbest_risk[a] = Gbest_daily_risk;
 			all_file_gbest_return[a] = Gbest_expect_retutn;
 			all_file_gbest_num[a] = Gbest_n;
@@ -1181,12 +1187,11 @@ int main()
 					all_file_gbest_portfolio[a][s] = final_portfolio[s];
 				}
 			}
-			//all_train_prtiod_result(a);
+			all_train_prtiod_result(a);
 		}
 
-	}
-	//all_test_risk();//總體測試期風險計算
-	//all_testperiod_final_result();//總體測試期結果輸出
+	all_test_risk();//總體測試期風險計算
+	all_testperiod_final_result();//總體測試期結果輸出
 	cout << endl << (double)clock() / CLOCKS_PER_SEC << "S" << endl;
 	system("pause");
 	return 0;
